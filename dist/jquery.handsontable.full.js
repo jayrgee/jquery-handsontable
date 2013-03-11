@@ -1994,6 +1994,7 @@ var settings = {
   'currentRowClassName': void 0,
   'currentColClassName': void 0,
   'asyncRendering': true,
+  'fixedCols' : 0, // new config setting
   'stretchH': 'hybrid'
 };
 
@@ -2164,6 +2165,7 @@ Handsontable.TableView = function (instance) {
     displayColumns: null,
     width: this.containerWidth,
     height: this.containerHeight,
+    fixedColumns: settings.fixedCols, // new config setting
     frozenColumns: settings.rowHeaders ? [instance.getRowHeader] : null,
     columnHeaders: settings.colHeaders ? instance.getColHeader : null,
     columnWidth: instance.getColWidth,
@@ -5493,6 +5495,7 @@ function WalkontableSettings(instance, settings) {
     data: void 0,
     offsetRow: 0,
     offsetColumn: 0,
+    fixedColumns: 0, // new config setting
     frozenColumns: null,
     columnHeaders: null, //this must be a function in format: function (col, TH) {}
     totalRows: void 0,
@@ -5965,6 +5968,8 @@ WalkontableTable.prototype._doDraw = function () {
     , displayTds
     , frozenColumns = this.instance.getSetting('frozenColumns')
     , frozenColumnsCount = frozenColumns ? frozenColumns.length : 0
+    , fixedColumns = this.instance.getSetting('fixedColumns') // new config setting
+    , dataCol
     , TR
     , TH
     , TD
@@ -6006,7 +6011,10 @@ WalkontableTable.prototype._doDraw = function () {
 
   if (this.instance.hasSetting('columnHeaders')) {
     for (c = 0; c < displayTds; c++) {
-      this.instance.getSetting('columnHeaders', offsetColumn + c, this.THEAD.childNodes[0].childNodes[frozenColumnsCount + c]);
+      // ignore column offset for frozen data column(s)
+      //this.instance.getSetting('columnHeaders', offsetColumn + c, this.THEAD.childNodes[0].childNodes[frozenColumnsCount + c]);
+      dataCol = (c < fixedColumns ? c : offsetColumn + c);
+      this.instance.getSetting('columnHeaders', dataCol, this.THEAD.childNodes[0].childNodes[frozenColumnsCount + c]);
     }
   }
 
@@ -6040,7 +6048,10 @@ WalkontableTable.prototype._doDraw = function () {
       else {
         TD = TR.childNodes[c + frozenColumnsCount];
         TD.className = '';
-        this.instance.getSetting('cellRenderer', offsetRow + r, offsetColumn + c, TD);
+        // ignore column offset for frozen data column(s)
+        //this.instance.getSetting('cellRenderer', offsetRow + r, offsetColumn + c, TD);
+        dataCol = (c < fixedColumns ? c : offsetColumn + c);
+        this.instance.getSetting('cellRenderer', offsetRow + r, dataCol, TD);
         if (this.hasEmptyCellProblem && TD.innerHTML === '') { //IE7
           TD.innerHTML = '&nbsp;';
         }

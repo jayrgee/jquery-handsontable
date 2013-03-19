@@ -30,9 +30,9 @@ div#example1 {
 </style>
 
 
-<script class="common">
+<script>
 function createMyData(maxrows, maxcols) {
-  var arr = []
+  var arrR = []
     , arrC = []
     , tmp = ""
     , r
@@ -44,9 +44,9 @@ function createMyData(maxrows, maxcols) {
         tmp = getColLabel(c).toLowerCase() + (r + 1);
         arrC.push(tmp);
       };
-      arr.push(arrC);
+      arrR.push(arrC);
      }
-  return arr;
+  return arrR;
 }
 
 function getColLabel (col) {
@@ -61,29 +61,6 @@ function getColLabel (col) {
   return columnLabel;
 }
 
-function randomString(length, chars) {
-  var result = '';
-  for (var i = length; i > 0; --i) result += chars.charAt(Math.round(Math.random() * (chars.length - 1)));
-  return result;
-}
-
-function createBigData(maxrows, maxcols) {
-  var arr = []
-    , arrC = []
-    , str = 'abcdefghijklmnopqrstuvwxyz'
-    , r
-    , c;
-
-  for (r = 0; r < maxrows; r++) {
-    arrC = [];
-    for (c = 0; c < maxcols; c++) {
-      arrC.push(randomString(3 * (1 + Math.sin(r + (2 * c))), str));
-    }
-    arr.push(arrC);
-  }
-
-  return arr;
-}
 </script>
 </head>
 
@@ -114,21 +91,13 @@ function createBigData(maxrows, maxcols) {
 </div>
 
 <script>
-function bindDumpButton() {
-  $('body').on('click', 'button[name=dump]', function () {
-    var dump = $(this).data('dump');
-    var $container = $(dump);
-    console.log('data of ' + dump, $container.handsontable('getData'));
-  });
-}
-
 $(function () {
-  var myFixedCols = 1;
+  var myFixedCols = 1
+    , myDataCols = 4
+    , myDataRows = 1;
 
   $("#example1").handsontable({
-    data: createMyData(1, 4),
-    //data: createBigData(5, 3),
-    //colWidths: [55, 80, 80, 80, 80, 80, 80], //can also be a number or a function
+    data: createMyData(myDataRows, myDataCols),
     rowHeaders: true,
     colHeaders: true,
     minSpareCols: 1,

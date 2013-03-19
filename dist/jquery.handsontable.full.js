@@ -6617,13 +6617,12 @@ WalkontableTable.prototype.getCoords = function (TD) {
     , fixedColumnsCount = this.instance.getSetting('fixedColumns')
     , offsetColumn = this.instance.getSetting('offsetColumn')
     , cellIndex = TD.cellIndex
-    , dataCol = ((offsetColumn > 0 && cellIndex <= fixedColumnsCount) ? TD.cellIndex - frozenColumnsCount : TD.cellIndex + offsetColumn - frozenColumnsCount);
-    console.log('dataCol: ' + dataCol);
-  return [
-    this.wtDom.prevSiblings(TD.parentNode).length + this.instance.getSetting('offsetRow'),
-    dataCol
-  ];
+    , col = ((offsetColumn > 0 && cellIndex <= fixedColumnsCount) ? TD.cellIndex - frozenColumnsCount : TD.cellIndex + offsetColumn - frozenColumnsCount)
+    , row = this.wtDom.prevSiblings(TD.parentNode).length + this.instance.getSetting('offsetRow');
+    console.log('getCoords: ' + [row, col]);
+  return [row, col];
 };
+
 function WalkontableWheel(instance) {
   var that = this;
 

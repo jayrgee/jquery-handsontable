@@ -1,4 +1,5 @@
 /**
+ * Addition of Fixed Column functionality (work-in-progress) based on:
  * Handsontable 0.8.15
  * Handsontable is a simple jQuery plugin for editable tables with basic copy-paste compatibility with Excel and Google Docs
  *
@@ -2173,6 +2174,14 @@ Handsontable.Core = function (rootElement, settings) {
    * Handsontable version
    */
   this.version = '0.8.15'; //inserted by grunt from package.json
+  
+  /**
+   * Get version
+   * @public
+   */
+  this.getVersion = function () {
+    return self.version;
+  };
 };
 
 var settings = {

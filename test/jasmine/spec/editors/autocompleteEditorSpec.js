@@ -21,6 +21,7 @@ describe('AutocompleteEditor', function () {
 
   afterEach(function () {
     if (this.$container) {
+      destroy();
       this.$container.remove();
     }
   });
@@ -55,9 +56,9 @@ describe('AutocompleteEditor', function () {
     waits(100);
 
     runs(function () {
-      keyPress('arrow_down');
-      keyPress('arrow_down');
-      keyPress('arrow_down');
+      keyDownUp('arrow_down');
+      keyDownUp('arrow_down');
+      keyDownUp('arrow_down');
       keyDownUp('enter');
     });
 
@@ -77,7 +78,7 @@ describe('AutocompleteEditor', function () {
       keyDownUp('esc');
     });
 
-    waits(51);
+    waitsFor(nextFrame, 'next frame', 60);
 
     runs(function () {
       expect(isAutocompleteVisible()).toEqual(false);
@@ -154,7 +155,7 @@ describe('AutocompleteEditor', function () {
     keyDownUp('enter');
 
     var $td = this.$container.find('.htCore tbody tr:eq(1) td:eq(1)');
-    expect(this.$keyboardProxy.width()).toEqual($td.width());
+    expect(keyProxy().width()).toEqual($td.width());
   });
 
   it('autocomplete textarea should have cell dimensions (after render)', function () {
@@ -185,16 +186,25 @@ describe('AutocompleteEditor', function () {
       render();
     });
 
-    waits(1);
+    waitsFor(nextFrame, 'next frame', 60);
 
     runs(function () {
       var $td = this.$container.find('.htCore tbody tr:eq(1) td:eq(1)');
-      expect(this.$keyboardProxy.width()).toEqual($td.width());
+      expect(autocompleteEditor().width()).toEqual($td.width());
     });
   });
 
   it('should show items as configured in cellProperties (async)', function () {
     var done = false;
+
+    var url;
+    if (window.location.href.indexOf('test/jasmine/') > -1) {
+      url = '../../demo/json/autocomplete.json';
+    }
+    else {
+      url = 'demo/json/autocomplete.json';
+    }
+
     runs(function () {
       handsontable({
         columns: [
@@ -203,10 +213,11 @@ describe('AutocompleteEditor', function () {
             options: {items: 10}, //`options` overrides `defaults` defined in bootstrap typeahead
             source: function (query, process) {
               $.ajax({
-                url: '../../demo/php/cars.php',
+                url: url,
                 data: {
                   query: query
                 },
+                dataType: 'json',
                 success: function (response) {
                   process(response);
                   done = true;
@@ -232,6 +243,221 @@ describe('AutocompleteEditor', function () {
     runs(function () {
       var li = autocomplete().$menu.find('li');
       expect(li.length).toEqual(10);
+    });
+  });
+
+  it('strict mode should not use value if it doesn\'t match the list (async reponse is empty)', function () {
+    var done = false
+      , count = 0;
+
+    var url;
+    if (window.location.href.indexOf('test/jasmine/') > -1) {
+      url = '../../demo/json/autocomplete.json';
+    }
+    else {
+      url = 'demo/json/autocomplete.json';
+    }
+
+    runs(function () {
+      handsontable({
+        data: [
+          ['one', 'two'],
+          ['three', 'four']
+        ],
+        columns: [
+          {
+            type: Handsontable.AutocompleteCell,
+            options: {items: 10}, //`options` overrides `defaults` defined in bootstrap typeahead
+            source: function (query, process) {
+              $.ajax({
+                url: url,
+                data: {
+                  query: query
+                },
+                dataType: 'json',
+                success: function (response) {
+                  process([]); // hardcoded empty result
+                  done = true;
+                }
+              });
+            },
+            strict: true
+          },
+          { type: 'text'}
+        ],
+        onChange: function () {
+          count++;
+        },
+        asyncRendering: false //TODO make sure tests pass also when async true
+      });
+      setDataAtCell(0, 0, 'unexistent');
+    });
+
+    waitsFor(function () {
+      return done;
+    }, 1000);
+
+    runs(function () {
+      expect(getData()).toEqual([
+        ['one', 'two'],
+        ['three', 'four']
+      ]);
+      expect(count).toEqual(1); //1 for loadData
+    });
+
+  });
+
+  it('strict mode should use value if it matches the list (sync response)', function () {
+    var count = 0;
+
+    handsontable({
+      data: [
+        ['one', 'two'],
+        ['three', 'four']
+      ],
+      columns: [
+        {
+          type: Handsontable.AutocompleteCell,
+          options: {items: 10}, //`options` overrides `defaults` defined in bootstrap typeahead
+          source: ['Acura', 'BMW', 'Bentley'],
+          strict: true
+        },
+        { type: 'text'}
+      ],
+      onChange: function () {
+        count++;
+      },
+      asyncRendering: false //TODO make sure tests pass also when async true
+    });
+    setDataAtCell(0, 0, 'unexistent');
+
+    expect(getData()).toEqual([
+      ['one', 'two'],
+      ['three', 'four']
+    ]);
+    expect(count).toEqual(1); //1 for loadData, 1 for edit
+  });
+
+  it('strict mode should use value if it matches the list (async response)', function () {
+    var done = false
+      , count = 0;
+
+    var url;
+    if (window.location.href.indexOf('test/jasmine/') > -1) {
+      url = '../../demo/json/autocomplete.json';
+    }
+    else {
+      url = 'demo/json/autocomplete.json';
+    }
+
+    runs(function () {
+      handsontable({
+        data: [
+          ['one', 'two'],
+          ['three', 'four']
+        ],
+        columns: [
+          {
+            type: Handsontable.AutocompleteCell,
+            options: {items: 10}, //`options` overrides `defaults` defined in bootstrap typeahead
+            source: function (query, process) {
+              $.ajax({
+                url: url,
+                data: {
+                  query: query
+                },
+                dataType: 'json',
+                success: function (response) {
+                  process(response);
+                  done = true;
+                }
+              });
+            },
+            strict: true
+          },
+          { type: 'text'}
+        ],
+        onChange: function () {
+          count++;
+        },
+        asyncRendering: false //TODO make sure tests pass also when async true
+      });
+      setDataAtCell(0, 0, 'Acura');
+    });
+
+    waitsFor(function () {
+      return done;
+    }, 1000);
+
+    runs(function () {
+      expect(getData()).toEqual([
+        ['Acura', 'two'],
+        ['three', 'four']
+      ]);
+      expect(count).toEqual(2); //1 for loadData, 1 for edit
+    });
+
+  });
+
+  it('typing in textarea should refresh the lookup list', function () {
+    runs(function () {
+      handsontable({
+        autoComplete: getAutocompleteConfig(false),
+        asyncRendering: false //TODO make sure tests pass also when async true
+      });
+      selectCell(2, 2);
+      keyDownUp('enter');
+
+      autocomplete().$element.val("e");
+      keyUp(69); //e
+      expect(autocomplete().$menu.find('li:eq(0)').data('value')).toEqual('yellow');
+
+      autocomplete().$element.val("ed");
+      keyUp(68); //e
+      expect(autocomplete().$menu.find('li:eq(0)').data('value')).toEqual('red');
+    });
+  });
+
+  it('cancel editing (Esc) should restore the previous value', function () {
+    runs(function () {
+      handsontable({
+        autoComplete: getAutocompleteConfig(false),
+        asyncRendering: false //TODO make sure tests pass also when async true
+      });
+      setDataAtCell(2, 2, 'black');
+      selectCell(2, 2);
+      keyDownUp('enter');
+
+      autocomplete().$element.val("ye");
+      keyUp(69); //e
+      keyDownUp('esc');
+      expect(getDataAtCell(2, 2)).toEqual('black');
+    });
+  });
+
+  it('finish editing should move the focus aways from textarea to table cell', function () {
+    runs(function () {
+      handsontable({
+        autoComplete: getAutocompleteConfig(false)
+      });
+      setDataAtCell(2, 2, 'black');
+      selectCell(2, 2);
+    });
+
+    waitsFor(nextFrame, 'next frame', 60);
+
+    runs(function () {
+      keyDownUp('enter');
+    });
+
+    waitsFor(nextFrame, 'next frame', 60);
+
+    runs(function () {
+      autocomplete().$element.val("ye");
+      keyDownUp(69); //e
+      deselectCell();
+      keyDownUp('enter');
+      expect(document.activeElement.nodeName).toEqual('TD');
     });
   });
 });

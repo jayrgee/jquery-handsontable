@@ -36,6 +36,7 @@
   border-width: 0;
   table-layout: fixed;
   width: 0;
+  outline-width: 0;
 }
 
 .handsontable col {
@@ -57,6 +58,7 @@
   font-size: 12px;
   vertical-align: top;
   overflow: hidden;
+  outline-width: 0;
 }
 
 .handsontable th:last-child {
@@ -190,12 +192,15 @@ textarea.handsontableInput {
   font-size: 13px;
   box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.4);
   resize: none;
-}
 
-.handsontableInputHolder.htHidden textarea.handsontableInput {
-  border-color: #5292F7;
-  background: #5292F7;
-  color: #5292F7;
+  /*below are needed to overwrite stuff added by jQuery UI Bootstrap theme*/
+  display: inline-block;
+  font-size: 13px;
+  line-height: inherit;
+  color: #000;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
 }
 
 .handsontableInputHolder {
@@ -204,7 +209,6 @@ textarea.handsontableInput {
   left: 0;
   width: 1px;
   height: 1px;
-  overflow: hidden;
 }
 
 /*
@@ -228,6 +232,13 @@ AutocompleteRenderer down arrow
 
 .handsontable td .htAutocompleteArrow:hover {
   color: #777;
+}
+
+/*
+NumericRenderer
+*/
+.handsontable .htNumeric {
+  text-align: right;
 }
 
 /* typeahead rules. Needed only if you are using the autocomplete feature */

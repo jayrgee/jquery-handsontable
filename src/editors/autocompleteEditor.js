@@ -1,80 +1,95 @@
-function isAutoComplete(keyboardProxy) {
-  var typeahead = keyboardProxy.data("typeahead");
-  if (typeahead && typeahead.$menu.is(":visible")) {
-    return typeahead;
-  }
-  else {
-    return false;
+function HandsontableAutocompleteEditorClass(instance) {
+  if (instance) {
+    this.isCellEdited = false;
+    this.instance = instance;
+    this.createElements();
+    this.bindEvents();
   }
 }
 
-/**
- * Autocomplete editor
- * @param {Object} instance Handsontable instance
- * @param {Element} td Table cell where to render
- * @param {Number} row
- * @param {Number} col
- * @param {String|Number} prop Row object property name
- * @param {Object} keyboardProxy jQuery element of keyboard proxy that contains current editing value
- * @param {Object} cellProperties Cell properites (shared by cell renderer and editor)
- */
-Handsontable.AutocompleteEditor = function (instance, td, row, col, prop, keyboardProxy, cellProperties) {
-  var typeahead = keyboardProxy.data('typeahead')
-    , i
-    , j
-    , dontHide = false;
+HandsontableAutocompleteEditorClass.prototype = new HandsontableTextEditorClass();
 
-  if (!typeahead) {
-    keyboardProxy.typeahead();
-    typeahead = keyboardProxy.data('typeahead');
-    typeahead._show = typeahead.show;
-    typeahead._hide = typeahead.hide;
-    typeahead._render = typeahead.render;
-    typeahead._highlighter = typeahead.highlighter;
-  }
-  else {
-    typeahead.$menu.off(); //remove previous typeahead bindings
-    keyboardProxy.off(); //remove previous typeahead bindings. Removing this will cause prepare to register 2 keydown listeners in typeahead
-    typeahead.listen(); //add typeahead bindings
-  }
+HandsontableAutocompleteEditorClass.prototype._createElements = HandsontableTextEditorClass.prototype.createElements;
 
-  typeahead.minLength = 0;
-  typeahead.highlighter = typeahead._highlighter;
+HandsontableAutocompleteEditorClass.prototype.createElements = function () {
+  this._createElements();
 
-  typeahead.show = function () {
-    if (keyboardProxy.parent().hasClass('htHidden')) {
-      return;
-    }
-    return typeahead._show.call(this);
-  };
+  this.TEXTAREA.typeahead();
+  this.typeahead = this.TEXTAREA.data('typeahead');
+  this.typeahead._render = this.typeahead.render;
+  this.typeahead.minLength = 0;
 
-  typeahead.hide = function () {
-    if (!dontHide) {
-      dontHide = false; //set to true by dblclick handler, otherwise appears and disappears immediately after double click
-      return typeahead._hide.call(this);
-    }
-  };
-
-  typeahead.lookup = function () {
+  this.typeahead.lookup = function () {
     var items;
     this.query = this.$element.val();
     items = $.isFunction(this.source) ? this.source(this.query, $.proxy(this.process, this)) : this.source;
     return items ? this.process(items) : this;
   };
 
-  typeahead.matcher = function () {
+  this.typeahead.matcher = function () {
     return true;
   };
+};
 
-  typeahead.select = function () {
-    var val = this.$menu.find('.active').attr('data-value') || keyboardProxy.val();
-    destroyer(true);
-    instance.setDataAtCell(row, prop, typeahead.updater(val));
-    return this.hide();
+HandsontableAutocompleteEditorClass.prototype._bindEvents = HandsontableTextEditorClass.prototype.bindEvents;
+
+HandsontableAutocompleteEditorClass.prototype.bindEvents = function () {
+  var that = this;
+
+  this.typeahead.listen();
+
+  this.TEXTAREA.off('keydown'); //unlisten
+  this.TEXTAREA.off('keyup'); //unlisten
+  this.TEXTAREA.off('keypress'); //unlisten
+
+  this.TEXTAREA_PARENT.off('.acEditor').on('keydown.acEditor', function (event) {
+    switch (event.keyCode) {
+      case 38: /* arrow up */
+        that.typeahead.prev();
+        event.stopImmediatePropagation();
+        break;
+
+      case 40: /* arrow down */
+        that.typeahead.next();
+        event.stopImmediatePropagation();
+        break;
+
+      case 13: /* enter */
+        event.preventDefault();
+        break;
+    }
+  });
+
+  this.TEXTAREA_PARENT.on('keyup.acEditor', function (event) {
+    if (Handsontable.helper.isPrintableChar(event.keyCode) || event.keyCode === 113 || event.keyCode === 13 || event.keyCode === 8 || event.keyCode === 46) {
+      that.typeahead.lookup();
+    }
+  });
+
+  this._bindEvents();
+};
+
+HandsontableAutocompleteEditorClass.prototype._bindTemporaryEvents = HandsontableTextEditorClass.prototype.bindTemporaryEvents;
+
+HandsontableAutocompleteEditorClass.prototype.bindTemporaryEvents = function (td, row, col, prop, value, cellProperties) {
+  var that = this
+    , i
+    , j;
+
+  this.typeahead.select = function () {
+    var output = this.hide(); //need to hide it before destroyEditor, because destroyEditor checks if menu is expanded
+    that.instance.destroyEditor(true);
+    if (typeof cellProperties.onSelect === 'function') {
+      cellProperties.onSelect(row, col, prop, this.$menu.find('.active').attr('data-value'), this.$menu.find('.active').index());
+    }
+    else {
+      that.instance.setDataAtRowProp(row, prop, this.$menu.find('.active').attr('data-value'));
+    }
+    return output;
   };
 
-  typeahead.render = function (items) {
-    typeahead._render.call(this, items);
+  this.typeahead.render = function (items) {
+    that.typeahead._render.call(this, items);
     if (!cellProperties.strict) {
       this.$menu.find('li:eq(0)').removeClass('active');
     }
@@ -87,85 +102,68 @@ Handsontable.AutocompleteEditor = function (instance, td, row, col, prop, keyboa
       if (i === 'options') {
         for (j in cellProperties.options) {
           if (cellProperties.options.hasOwnProperty(j)) {
-            typeahead.options[j] = cellProperties.options[j];
+            this.typeahead.options[j] = cellProperties.options[j];
           }
         }
       }
       else {
-        typeahead[i] = cellProperties[i];
+        this.typeahead[i] = cellProperties[i];
       }
     }
   }
 
-  var wasDestroyed = false;
-
-  keyboardProxy.on("keydown.editor", function (event) {
-    switch (event.keyCode) {
-      case 27: /* ESC */
-        dontHide = false;
-        break;
-
-      case 37: /* arrow left */
-      case 39: /* arrow right */
-      case 38: /* arrow up */
-      case 40: /* arrow down */
-      case 9: /* tab */
-      case 13: /* return/enter */
-        if (!keyboardProxy.parent().hasClass('htHidden')) {
-          event.stopImmediatePropagation();
-        }
-        event.preventDefault();
-    }
-  });
-
-  keyboardProxy.on("keyup.editor", function (event) {
-      switch (event.keyCode) {
-        case 9: /* tab */
-        case 13: /* return/enter */
-          if (!wasDestroyed && !isAutoComplete(keyboardProxy)) {
-            var ev = $.Event('keyup');
-            ev.keyCode = 113; //113 triggers lookup, in contrary to 13 or 9 which only trigger hide
-            keyboardProxy.trigger(ev);
-          }
-          else {
-            setTimeout(function () { //so pressing enter will move one row down after change is applied by 'select' above
-              var ev = $.Event('keydown');
-              ev.keyCode = event.keyCode;
-              keyboardProxy.parent().trigger(ev);
-            }, 10);
-          }
-          break;
-
-        default:
-          if (!wasDestroyed && !Handsontable.helper.isPrintableChar(event.keyCode)) { //otherwise Del or F12 would open suggestions list
-            event.stopImmediatePropagation();
-          }
-      }
-    }
-  );
-
-  var textDestroyer = Handsontable.TextEditor(instance, td, row, col, prop, keyboardProxy, cellProperties);
+  this._bindTemporaryEvents(td, row, col, prop, value, cellProperties);
 
   function onDblClick() {
-    keyboardProxy[0].focus();
-    texteditor.beginEditing(instance, null, row, col, prop, keyboardProxy, true);
-    dontHide = true;
-    setTimeout(function () { //otherwise is misaligned in IE9
-      keyboardProxy.data('typeahead').lookup();
+    that.beginEditing(row, col, prop, true);
+    that.instance.registerTimeout('IE9_align_fix', function () { //otherwise is misaligned in IE9
+      that.typeahead.lookup();
     }, 1);
   }
 
-  instance.view.wt.update('onCellDblClick', onDblClick); //no need to destroy it here because it will be destroyed by TextEditor destroyer
+  this.instance.view.wt.update('onCellDblClick', onDblClick);
+};
 
-  var destroyer = function (isCancelled) {
-    wasDestroyed = true;
-    keyboardProxy.off(); //remove typeahead bindings
-    textDestroyer(isCancelled);
-    dontHide = false;
-    if (isAutoComplete(keyboardProxy)) {
-      isAutoComplete(keyboardProxy).hide();
+HandsontableAutocompleteEditorClass.prototype._finishEditing = HandsontableTextEditorClass.prototype.finishEditing;
+
+HandsontableAutocompleteEditorClass.prototype.finishEditing = function (isCancelled, ctrlDown) {
+  if (!isCancelled) {
+    if (this.isMenuExpanded() && this.typeahead.$menu.find('.active').length) {
+      this.typeahead.select();
+      this.isCellEdited = false; //cell value was updated by this.typeahead.select (issue #405)
     }
-  };
+    else if (this.cellProperties.strict) {
+      this.isCellEdited = false; //cell value was not picked from this.typeahead.select (issue #405)
+    }
+  }
+  this._finishEditing(isCancelled, ctrlDown);
+};
 
-  return destroyer;
+HandsontableAutocompleteEditorClass.prototype.isMenuExpanded = function () {
+  if (this.typeahead.$menu.is(":visible")) {
+    return this.typeahead;
+  }
+  else {
+    return false;
+  }
+};
+
+/**
+ * Autocomplete editor
+ * @param {Object} instance Handsontable instance
+ * @param {Element} td Table cell where to render
+ * @param {Number} row
+ * @param {Number} col
+ * @param {String|Number} prop Row object property name
+ * @param value Original value (remember to escape unsafe HTML before inserting to DOM!)
+ * @param {Object} cellProperties Cell properites (shared by cell renderer and editor)
+ */
+Handsontable.AutocompleteEditor = function (instance, td, row, col, prop, value, cellProperties) {
+  if (!instance.autocompleteEditor) {
+    instance.autocompleteEditor = new HandsontableAutocompleteEditorClass(instance);
+  }
+  instance.autocompleteEditor.bindTemporaryEvents(td, row, col, prop, value, cellProperties);
+  return function (isCancelled) {
+    instance.autocompleteEditor.finishEditing(isCancelled);
+  }
 };

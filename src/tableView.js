@@ -4,29 +4,44 @@
  */
 Handsontable.TableView = function (instance) {
   var that = this;
+  var $window = $(window);
 
   this.instance = instance;
   var settings = this.instance.getSettings();
 
+  instance.rootElement.data('originalStyle', instance.rootElement.attr('style')); //needed to retrieve original style in jsFiddle link generator in HT examples. may be removed in future versions
   instance.rootElement.addClass('handsontable');
   var $table = $('<table class="htCore"><thead></thead><tbody></tbody></table>');
+
+  instance.$table = $table;
   instance.rootElement.prepend($table);
+
   this.overflow = instance.rootElement.css('overflow');
   if ((settings.width || settings.height) && !(this.overflow === 'scroll' || this.overflow === 'auto')) {
     this.overflow = 'auto';
   }
   if (this.overflow === 'scroll' || this.overflow === 'auto') {
-    //instance.rootElement[0].style.overflow = 'visible';
-    instance.rootElement[0].style.overflow = 'hidden';
+    instance.rootElement[0].style.overflow = 'visible';
+    //instance.rootElement[0].style.overflow = 'hidden';
   }
   this.determineContainerSize();
   //instance.rootElement[0].style.height = '';
   //instance.rootElement[0].style.width = '';
 
+  $(document.documentElement).on('keyup.handsontable', function (event) {
+    if (instance.selection.isInProgress() && !event.shiftKey) {
+      instance.selection.finish();
+    }
+  });
+
   var isMouseDown
     , dragInterval;
 
-  $(document.body).on('mouseup', function () {
+  $(document.documentElement).on('mouseup.handsontable', function (event) {
+    if (instance.selection.isInProgress() && event.which === 1) { //is left mouse button
+      instance.selection.finish();
+    }
+
     isMouseDown = false;
     clearInterval(dragInterval);
     dragInterval = null;
@@ -39,11 +54,13 @@ Handsontable.TableView = function (instance) {
     }
   });
 
-  $(document.documentElement).on('mousedown', function (event) {
-    var next = event.target;
+  $(document.documentElement).on('mousedown.handsontable', function (event) {
+    var target = event.target
+      , next = target;
+
     if (next !== that.wt.wtTable.spreader) { //immediate click on "spreader" means click on the right side of vertical scrollbar
       while (next !== null && next !== document.documentElement) {
-        if (next === instance.rootElement[0] || $(next).attr('id') === 'context-menu-layer' || $(next).is('.context-menu-list') || $(next).is('.typeahead li')) {
+        if (next === instance.rootElement[0] || next.id === 'context-menu-layer' || $(next).is('.context-menu-list') || $(next).is('.typeahead li')) {
           return; //click inside container
         }
         next = next.parentNode;
@@ -54,7 +71,12 @@ Handsontable.TableView = function (instance) {
       that.instance.deselectCell();
     }
     else {
-      that.instance.destroyEditor();
+      if (target.nodeName.toLowerCase() === 'input' || target.nodeName.toLowerCase() === 'textarea') {
+        that.instance.deselectCell();
+      }
+      else {
+        that.instance.destroyEditor();
+      }
     }
   });
 
@@ -116,6 +138,19 @@ Handsontable.TableView = function (instance) {
     }
   });
 
+  var clearTextSelection = function () {
+    //http://stackoverflow.com/questions/3169786/clear-text-selection-with-javascript
+    if (window.getSelection) {
+      if (window.getSelection().empty) {  // Chrome
+        window.getSelection().empty();
+      } else if (window.getSelection().removeAllRanges) {  // Firefox
+        window.getSelection().removeAllRanges();
+      }
+    } else if (document.selection) {  // IE?
+      document.selection.empty();
+    }
+  };
+
   var walkontableConfig = {
     table: $table[0],
     async: settings.asyncRendering,
@@ -133,7 +168,7 @@ Handsontable.TableView = function (instance) {
     columnHeaders: settings.colHeaders ? instance.getColHeader : null,
     columnWidth: instance.getColWidth,
     cellRenderer: function (row, column, TD) {
-      that.applyCellTypeMethod('renderer', TD, {row: row, col: column}, instance.getDataAtCell(row, column));
+      that.applyCellTypeMethod('renderer', TD, row, column);
     },
     selections: {
       current: {
@@ -145,7 +180,7 @@ Handsontable.TableView = function (instance) {
           color: '#5292F7',
           style: 'solid',
           cornerVisible: function () {
-            return settings.fillHandle && !texteditor.isCellEdited && !instance.selection.isMultiple()
+            return settings.fillHandle && !that.isCellEdited() && !instance.selection.isMultiple()
           }
         }
       },
@@ -158,7 +193,7 @@ Handsontable.TableView = function (instance) {
           color: '#89AFF9',
           style: 'solid',
           cornerVisible: function () {
-            return settings.fillHandle && !texteditor.isCellEdited && instance.selection.isMultiple()
+            return settings.fillHandle && !that.isCellEdited() && instance.selection.isMultiple()
           }
         }
       },
@@ -183,6 +218,9 @@ Handsontable.TableView = function (instance) {
       else {
         instance.selection.setRangeStart(coordsObj);
       }
+      TD.focus();
+      event.preventDefault();
+      clearTextSelection();
     },
     onCellMouseOver: function (event, coords, TD) {
       var coordsObj = {row: coords[0], col: coords[1]};
@@ -198,8 +236,11 @@ Handsontable.TableView = function (instance) {
       instance.autofill.handle.isDragged = 1;
       event.preventDefault();
     },
-    onCellCornerDblClick: function (event) {
+    onCellCornerDblClick: function () {
       instance.autofill.selectAdjacent();
+    },
+    onDraw: function () {
+      $window.trigger('resize');
     }
   };
 
@@ -209,23 +250,34 @@ Handsontable.TableView = function (instance) {
   this.instance.forceFullRender = true; //used when data was changed
   this.render();
 
-  $(window).on('resize', function () {
-    that.determineContainerSize();
-    that.wt.update('width', that.containerWidth);
-    that.wt.update('height', that.containerHeight);
-    that.instance.forceFullRender = true;
-    that.render();
+  $window.on('resize.handsontable', function () {
+    that.instance.registerTimeout('resizeTimeout', function () {
+      var lastContainerWidth = that.containerWidth;
+      var lastContainerHeight = that.containerHeight;
+      that.determineContainerSize();
+      if (lastContainerWidth !== that.containerWidth || lastContainerHeight !== that.containerHeight) {
+        that.wt.update('width', that.containerWidth);
+        that.wt.update('height', that.containerHeight);
+        that.instance.forceFullRender = true;
+        that.render();
+      }
+    }, 60);
   });
 
   $(that.wt.wtTable.spreader).on('mousedown.handsontable, contextmenu.handsontable', function (event) {
-    if(event.target === that.wt.wtTable.spreader && event.which === 3) { //right mouse button exactly on spreader means right clickon the right hand side of vertical scrollbar
+    if (event.target === that.wt.wtTable.spreader && event.which === 3) { //right mouse button exactly on spreader means right clickon the right hand side of vertical scrollbar
       event.stopPropagation();
     }
   });
+
+  $table[0].focus(); //otherwise TextEditor tests do not pass in IE8
+};
+
+Handsontable.TableView.prototype.isCellEdited = function () {
+  return (this.instance.textEditor && this.instance.textEditor.isCellEdited) || (this.instance.autocompleteEditor && this.instance.autocompleteEditor.isCellEdited);
 };
 
 Handsontable.TableView.prototype.determineContainerSize = function () {
-  this.instance.rootElement[0].firstChild.style.display = 'none';
   var settings = this.instance.getSettings();
   this.containerWidth = settings.width;
   this.containerHeight = settings.height;
@@ -241,7 +293,6 @@ Handsontable.TableView.prototype.determineContainerSize = function () {
       this.containerHeight = computedHeight;
     }
   }
-  this.instance.rootElement[0].firstChild.style.display = 'table';
 };
 
 Handsontable.TableView.prototype.render = function () {
@@ -250,36 +301,18 @@ Handsontable.TableView.prototype.render = function () {
   }
   this.wt.draw(!this.instance.forceFullRender);
   this.instance.rootElement.triggerHandler('render.handsontable');
-  this.instance.forceFullRender = false;
   if (this.instance.forceFullRender) {
     Handsontable.PluginHooks.run(this.instance, 'afterRender');
   }
+  this.instance.forceFullRender = false;
 };
 
-Handsontable.TableView.prototype.applyCellTypeMethod = function (methodName, td, coords, extraParam) {
-  var prop = this.instance.colToProp(coords.col)
-    , method
-    , cellProperties = this.instance.getCellMeta(coords.row, coords.col);
-
-  if (typeof cellProperties.type === 'string') {
-    switch (cellProperties.type) {
-      case 'autocomplete':
-        cellProperties.type = Handsontable.AutocompleteCell;
-        break;
-
-      case 'checkbox':
-        cellProperties.type = Handsontable.CheckboxCell;
-        break;
-    }
+Handsontable.TableView.prototype.applyCellTypeMethod = function (methodName, td, row, col) {
+  var prop = this.instance.colToProp(col)
+    , cellProperties = this.instance.getCellMeta(row, col);
+  if (cellProperties[methodName]) {
+    return cellProperties[methodName](this.instance, td, row, col, prop, this.instance.getDataAtRowProp(row, prop), cellProperties);
   }
-
-  if (cellProperties.type && typeof cellProperties.type[methodName] === "function") {
-    method = cellProperties.type[methodName];
-  }
-  if (typeof method !== "function") {
-    method = Handsontable.TextCell[methodName];
-  }
-  return method(this.instance, td, coords.row, coords.col, prop, extraParam, cellProperties);
 };
 
 /**

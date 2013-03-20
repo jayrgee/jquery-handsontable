@@ -783,6 +783,20 @@ Handsontable.Core = function (rootElement, settings) {
         coords.col = totalCols - 1;
       }
 
+      // handle fixed data columns
+      var fixedColumnsCount = self.view.wt.getSetting('fixedColumns')
+        , startColumn = priv.selStart.col()
+        , endColumn = coords.col
+        , offsetColumn = self.colOffset();
+      if (fixedColumnsCount > 0 && offsetColumn > 0) {
+        if (startColumn < fixedColumnsCount && endColumn >= fixedColumnsCount) {
+          coords.col = endColumn + offsetColumn;
+        }
+        else if (startColumn >= fixedColumnsCount && endColumn < fixedColumnsCount + offsetColumn) {
+          coords.col = endColumn - offsetColumn;
+        }
+      }
+
       selection.setRangeStart(coords);
     },
 
@@ -5417,11 +5431,14 @@ WalkontableScroll.prototype.scrollViewport = function (coords) {
     //this.scrollVertical(coords[0] - offsetRow); //this should not be needed anymore
   }
 
+  // handle fixed data columns
+  var fixedColumnsCount = this.instance.getSetting('fixedColumns')
+
   if (viewportColumns > 0 && viewportColumns < totalColumns) {
     if (coords[1] > offsetColumn + viewportColumns - 1) {
       this.scrollHorizontal(coords[1] - (offsetColumn + viewportColumns - 1));
     }
-    else if (coords[1] < offsetColumn) {
+    else if (coords[1] < offsetColumn && fixedColumnsCount == 0) {
       this.scrollHorizontal(coords[1] - offsetColumn);
     }
     else {
@@ -6589,8 +6606,11 @@ WalkontableTable.prototype.getCell = function (coords) {
     return -2; //row after viewport
   }
   else {
-    var offsetColumn = this.instance.getSetting('offsetColumn');
-    if (coords[1] < offsetColumn) {
+    var offsetColumn = this.instance.getSetting('offsetColumn')
+      , col = coords[1]
+      , tdCol
+      , fixedColumnsCount = this.instance.getSetting('fixedColumns');
+    if (col < offsetColumn && fixedColumnsCount == 0) { // ** not applicable if there are fixed columns
       return -3; //column before viewport
     }
     else if (coords[1] > offsetColumn + this.instance.getSetting('displayColumns') - 1) {
@@ -6606,7 +6626,13 @@ WalkontableTable.prototype.getCell = function (coords) {
         tr = this.TBODY.childNodes[coords[0] - offsetRow];
       }
 
-      return tr.childNodes[coords[1] - offsetColumn + frozenColumnsCount];
+      if (col < fixedColumnsCount) {
+        tdCol = col + frozenColumnsCount
+      }
+      else {
+        tdCol = col - offsetColumn + frozenColumnsCount
+      }
+      return tr.childNodes[tdCol];
     }
   }
 };
@@ -6619,7 +6645,6 @@ WalkontableTable.prototype.getCoords = function (TD) {
     , cellIndex = TD.cellIndex
     , col = ((offsetColumn > 0 && cellIndex <= fixedColumnsCount) ? TD.cellIndex - frozenColumnsCount : TD.cellIndex + offsetColumn - frozenColumnsCount)
     , row = this.wtDom.prevSiblings(TD.parentNode).length + this.instance.getSetting('offsetRow');
-    console.log('getCoords: ' + [row, col]);
   return [row, col];
 };
 

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'>
+<title>Fixed Column - Scroll - Handsontable</title>
+
+<!--
+Loading Handsontable (full distribution that includes all dependencies apart from jQuery)
+-->
+<script src="../lib/jquery.js"></script>
+<script src="../dist/jquery.handsontable.full.js"></script>
+<link rel="stylesheet" media="screen" href="../dist/jquery.handsontable.full.css">
+
+<style type="text/css">
+h1, h2, h3 {
+  font-family: Verdana, Helvetica, Arial, FreeSans, sans-serif;
+  font-style: normal;
+}
+
+h1 { margin: 20px, 0; font-size: 1.2em; }
+h2 { margin: 20px, 0; font-size: 1.0em; }
+
+div#example1 {
+  width: 250px;
+  height: 150px;
+  overflow: scroll;
+  border: 1px dotted;
+}
+
+</style>
+
+
+<script>
+function createMyData(maxrows, maxcols) {
+  var arrR = []
+    , arrC = []
+    , tmp = ""
+    , r
+    , c;
+
+    for (r = 0; r < maxrows; r++) {
+      arrC = [];
+      for (c = 0; c < maxcols; c++) {
+        tmp = getColLabel(c).toLowerCase() + (r + 1);
+        arrC.push(tmp);
+      };
+      arrR.push(arrC);
+     }
+  return arrR;
+}
+
+function getColLabel (col) {
+  var dividend = col + 1;
+  var columnLabel = '';
+  var modulo;
+  while (dividend > 0) {
+    modulo = (dividend - 1) % 26;
+    columnLabel = String.fromCharCode(65 + modulo) + columnLabel;
+    dividend = parseInt((dividend - modulo) / 26, 10);
+  }
+  return columnLabel;
+}
+
+</script>
+</head>
+
+<body>
+
+<div id="container">
+
+  <h1><a href="../index.html">Handsontable</a></h1>
+
+  <h2>Vertical and horizontal scrollbars with <span id="myfixedcols">?</span> fixed column(s)</h2>
+  
+  <p>Note: Work in progress!</p>
+
+  <div id="example1"></div>
+
+  <p>
+    <button name="dump" data-dump="#example1" title="Prints current data source to Firebug/Chrome Dev Tools">Dump
+      data to console
+    </button>
+  </p>
+
+  <p>Dependencies</p>
+  <ul>
+    <li>jQuery <span id="jqversion"></span></li>
+    <li>Handsontable <span id="hotversion"></span></li>
+  </ul>
+
+</div>
+
+<script>
+$(function () {
+  var myFixedCols = 1
+    , myDataCols = 4
+    , myDataRows = 1;
+
+  $("#example1").handsontable({
+    data: createMyData(myDataRows, myDataCols),
+    rowHeaders: true,
+    colHeaders: true,
+    minSpareCols: 1,
+    minSpareRows: 1,
+    fixedCols: myFixedCols, // new config parameter
+    contextMenu: true
+  });
+
+  $('body').on('click', 'button[name=dump]', function () {
+    var dump = $(this).data('dump');
+    var $container = $(dump);
+    console.log('data of ' + dump, $container.handsontable('getData'));
+  });
+
+  $("#myfixedcols").text(myFixedCols);
+  $("#jqversion").text(jQuery.fn.jquery);
+  $("#hotversion").text($('div#example1').handsontable('getVersion'));
+
+}());
+</script>
+
+</body>
+</html>

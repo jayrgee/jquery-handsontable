@@ -6585,7 +6585,14 @@ WalkontableTable.prototype.isCellVisible = function (r, c, TD) {
  *
  */
 WalkontableTable.prototype.getCell = function (coords) {
-  var offsetRow = this.instance.getSetting('offsetRow');
+  var offsetRow = this.instance.getSetting('offsetRow')
+    , offsetColumn = this.instance.getSetting('offsetColumn')
+    , frozenColumns = this.instance.getSetting('frozenColumns')
+    , frozenColumnsCount = (frozenColumns ? frozenColumns.length : 0)
+    , fixedColumnsCount = this.instance.getSetting('fixedColumns')
+    , tr
+    , tdIndex;
+
   if (coords[0] < offsetRow) {
     return -1; //row before viewport
   }
@@ -6593,24 +6600,27 @@ WalkontableTable.prototype.getCell = function (coords) {
     return -2; //row after viewport
   }
   else {
-    var offsetColumn = this.instance.getSetting('offsetColumn');
-    if (coords[1] < offsetColumn) {
+    if (coords[1] < offsetColumn && fixedColumnsCount == 0) {
       return -3; //column before viewport
     }
     else if (coords[1] > offsetColumn + this.instance.getSetting('displayColumns') - 1) {
       return -4; //column after viewport
     }
     else {
-      var frozenColumns = this.instance.getSetting('frozenColumns')
-        , frozenColumnsCount = (frozenColumns ? frozenColumns.length : 0)
-        , tr = this.TBODY.childNodes[coords[0] - offsetRow];
+      tr = this.TBODY.childNodes[coords[0] - offsetRow];
 
       if (typeof tr === "undefined") { //this block is only needed in async mode
         this.adjustAvailableNodes();
         tr = this.TBODY.childNodes[coords[0] - offsetRow];
       }
 
-      return tr.childNodes[coords[1] - offsetColumn + frozenColumnsCount];
+      if (coords[1] >= fixedColumnsCount) {
+        tdIndex = coords[1] - offsetColumn + frozenColumnsCount;
+      }
+      else { // cell is a fixed column - no offset required
+        tdIndex = coords[1] + frozenColumnsCount;
+      }
+      return tr.childNodes[tdIndex];
     }
   }
 };
@@ -6623,7 +6633,6 @@ WalkontableTable.prototype.getCoords = function (TD) {
     , cellIndex = TD.cellIndex
     , col = ((offsetColumn > 0 && cellIndex <= fixedColumnsCount) ? TD.cellIndex - frozenColumnsCount : TD.cellIndex + offsetColumn - frozenColumnsCount)
     , row = this.wtDom.prevSiblings(TD.parentNode).length + this.instance.getSetting('offsetRow');
-    console.log('getCoords: ' + [row, col]);
   return [row, col];
 };
 

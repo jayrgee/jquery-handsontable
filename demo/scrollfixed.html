@@ -1,123 +1,205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-<meta charset='utf-8'>
-<title>Fixed Column - Scroll - Handsontable</title>
+  <meta charset='utf-8'>
+  <title>Scroll - Handsontable</title>
 
-<!--
-Loading Handsontable (full distribution that includes all dependencies apart from jQuery)
--->
-<script src="../lib/jquery.js"></script>
-<script src="../dist/jquery.handsontable.full.js"></script>
-<link rel="stylesheet" media="screen" href="../dist/jquery.handsontable.full.css">
+  <!--
+  Loading Handsontable (full distribution that includes all dependencies apart from jQuery)
+  -->
+  <script src="../lib/jquery.js"></script>
+  <script src="../dist/jquery.handsontable.full.js"></script>
+  <link rel="stylesheet" media="screen" href="../dist/jquery.handsontable.full.css">
 
-<style type="text/css">
-h1, h2, h3 {
-  font-family: Verdana, Helvetica, Arial, FreeSans, sans-serif;
-  font-style: normal;
-}
+  <!--
+  Loading demo dependencies. They are used here only to enhance the examples on this page
+  -->
+  <link rel="stylesheet" media="screen" href="css/samples.css">
+  <script src="js/samples.js"></script>
+  <script src="js/highlight/highlight.pack.js"></script>
+  <link rel="stylesheet" media="screen" href="js/highlight/styles/github.css">
 
-h1 { margin: 20px, 0; font-size: 1.2em; }
-h2 { margin: 20px, 0; font-size: 1.0em; }
+  <!--
+  Facebook open graph. Don't copy this to your project :)
+  -->
+  <meta property="og:title" content="Scroll">
+  <meta property="og:description"
+        content="If you want scrollbars, just set it in the container CSS.">
+  <meta property="og:url" content="http://handsontable.com/demo/scroll.html">
+  <meta property="og:image" content="http://handsontable.com/demo/image/og-image.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="409">
+  <meta property="og:image:height" content="164">
+  <link rel="canonical" href="http://handsontable.com/demo/scroll.html">
 
-div#example1 {
-  width: 250px;
-  height: 150px;
-  overflow: scroll;
-  border: 1px dotted;
-}
+  <!--
+  Google Analytics for GitHub Page. Don't copy this to your project :)
+  -->
+  <script src="js/ga.js"></script>
 
-</style>
+  <script class="common">
+    function randomString(length, chars) {
+      var result = '';
+      for (var i = length; i > 0; --i) result += chars.charAt(Math.round(Math.random() * (chars.length - 1)));
+      return result;
+    }
 
+    function createBigData() {
+      var arr = [];
+      var str = 'abcdefghijklmnopqrstuvwxyz';
+      var i;
 
-<script>
-function createMyData(maxrows, maxcols) {
-  var arrR = []
-    , arrC = []
-    , tmp = ""
-    , r
-    , c;
+      for (i = 0; i < 100000; i++) {
+        arr.push([
+          //i,
+          randomString(3 * (1 + Math.sin(i)), str),
+          randomString(3 * (1 + Math.sin(i + 2)), str),
+          randomString(3 * (1 + Math.sin(i + 4)), str),
+          randomString(3 * (1 + Math.sin(i + 6)), str),
+          randomString(3 * (1 + Math.sin(i + 8)), str)
+        ]);
+      }
 
-    for (r = 0; r < maxrows; r++) {
-      arrC = [];
-      for (c = 0; c < maxcols; c++) {
-        tmp = getColLabel(c).toLowerCase() + (r + 1);
-        arrC.push(tmp);
-      };
-      arrR.push(arrC);
-     }
-  return arrR;
-}
-
-function getColLabel (col) {
-  var dividend = col + 1;
-  var columnLabel = '';
-  var modulo;
-  while (dividend > 0) {
-    modulo = (dividend - 1) % 26;
-    columnLabel = String.fromCharCode(65 + modulo) + columnLabel;
-    dividend = parseInt((dividend - modulo) / 26, 10);
-  }
-  return columnLabel;
-}
-
-</script>
+      return arr;
+    }
+  </script>
 </head>
 
 <body>
+<a href="http://github.com/jayrgee/jquery-handsontable">
+  <img style="position: absolute; top: 0; right: 0; border: 0;"
+       src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"/>
+</a>
 
 <div id="container">
+<div class="columnLayout">
 
-  <h1><a href="../index.html">Handsontable</a></h1>
+<div class="rowLayout">
+  <div class="descLayout">
+    <div class="pad">
+      <h1><a href="../index.html">Handsontable</a></h1>
 
-  <h2>Vertical and horizontal scrollbars: with <span id="myfixedcols">?</span> fixed column(s)</h2>
-  
-  <p>Note: Work in progress!</p>
+      <div class="tagline">a minimalistic Excel-like <span class="nobreak">data grid</span> editor
+        for HTML, JavaScript &amp; jQuery
+      </div>
 
-  <div id="example1"></div>
+      <h2>Fixed Columns</h2>
 
-  <p>
-    <button name="dump" data-dump="#example1" title="Prints current data source to Firebug/Chrome Dev Tools">Dump
-      data to console
-    </button>
-  </p>
+      <p>This page shows how to configure Handsontable fixed columns:</p>
 
-  <p>Dependencies</p>
-  <ul>
-    <li>jQuery <span id="jqversion"></span></li>
-    <li>Handsontable <span id="hotversion"></span></li>
-  </ul>
-
+      <ul>
+        <li><a href="#fixed1">One fixed column</a></li>
+        <li><a href="#fixed2">Two fixed columns</a></li>
+      </ul>
+    </div>
+  </div>
 </div>
 
-<script>
-$(function () {
-  var myFixedCols = 1
-    , myDataCols = 4
-    , myDataRows = 1;
+<div class="rowLayout">
+  <div class="descLayout">
+    <div class="pad">
+      <a name="fixed1"></a>
 
-  $("#example1").handsontable({
-    data: createMyData(myDataRows, myDataCols),
-    rowHeaders: true,
-    colHeaders: true,
-    minSpareCols: 1,
-    minSpareRows: 1,
-    fixedCols: myFixedCols, // new config parameter
-    contextMenu: true
-  });
+      <h2>One fixed column</h2>
 
-  $('body').on('click', 'button[name=dump]', function () {
-    var dump = $(this).data('dump');
-    var $container = $(dump);
-    console.log('data of ' + dump, $container.handsontable('getData'));
-  });
+      <p>Specify one fixed column with <code>fixedCols: 1</code> option.</p>
 
-  $("#myfixedcols").text(myFixedCols);
-  $("#jqversion").text(jQuery.fn.jquery);
-  $("#hotversion").text($('div#example1').handsontable('getVersion'));
+      <p>Note: You'll need horizontal scrollbars, so just set a container <code>width</code> and <code>overflow: scroll</code> in CSS.</p>
 
-}());
-</script>
+      <div id="example1" style="width: 300px; height: 300px; overflow: scroll"></div>
 
+      <p>
+        <button name="dump" data-dump="#example1" title="Prints current data source to Firebug/Chrome Dev Tools">Dump
+          data to console
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <div class="codeLayout">
+    <div class="pad">
+
+      <script>
+        /*
+         Container looks like this:
+
+         <div id="example1" style="width: 300px; height: 300px; overflow: scroll"></div>
+         */
+
+        $("#example1").handsontable({
+          data: createBigData(),
+          colWidths: [65, 65, 47, 47, 47, 47, 47], //can also be a number or a function
+          rowHeaders: true,
+          colHeaders: true,
+          minSpareRows: 1,
+          minSpareCols: 1,
+          fixedCols: 1,
+          contextMenu: true
+        });
+      </script>
+    </div>
+  </div>
+</div>
+
+<div class="rowLayout">
+  <div class="descLayout">
+    <div class="pad">
+      <a name="fixed2"></a>
+
+      <h2>Two fixed columns</h2>
+
+      <p>Specify two fixed columns with <code>fixedCols: 2</code> option.</p>
+
+      <p>Note: You'll need horizontal scrollbars, so just set a container <code>width</code> and <code>overflow: scroll</code> in CSS.</p>
+
+      <div id="example2" style="width: 300px; height: 300px; overflow: scroll"></div>
+
+      <p>
+        <button name="dump" data-dump="#example2" title="Prints current data source to Firebug/Chrome Dev Tools">Dump
+          data to console
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <div class="codeLayout">
+    <div class="pad">
+      <div class="jsFiddle">
+        <div class="jsFiddleLink">Edit in jsFiddle</div>
+      </div>
+
+      <script>
+        /*
+         Container looks like this:
+
+         <div id="example2" style="width: 300px; height: 300px; overflow: scroll"></div>
+         */
+
+        $("#example2").handsontable({
+          data: createBigData(),
+          colWidths: [65, 47, 47, 47, 47, 47, 47], //can also be a number or a function
+          rowHeaders: true,
+          colHeaders: true,
+          minSpareRows: 1,
+          minSpareCols: 1,
+          fixedCols: 2,
+          contextMenu: true
+        });
+      </script>
+    </div>
+  </div>
+</div>
+
+<div class="rowLayout">
+  <div class="descLayout noMargin">
+    <div class="pad"><p>For more examples, head back to the <a href="../index.html">main page</a>.</p>
+
+      <p class="small">Handsontable &copy; 2012 Marcin Warpechowski and contributors.<br> Code and documentation
+        licensed under the The MIT License.</p>
+    </div>
+  </div>
+</div>
+</div>
+</div>
 </body>
 </html>

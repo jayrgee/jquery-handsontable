@@ -1,3 +1,39 @@
+## [0.8.17](https://github.com/warpech/jquery-handsontable/tree/v0.8.17) (Mar 31, 2013)
+
+Features:
+- performance: remove jQuery dependency from many places
+- performance: in cell renderers, replace `innerHTML` with `createTextNode`
+- better integration with Twitter Bootstrap (fixes [#78](https://github.com/warpech/jquery-handsontable/issues/78))
+
+Bugfixes:
+- empty cell not shown in Firefox when not in standards mode ([#418](https://github.com/warpech/jquery-handsontable/issues/418)). This is questionable as a bug but anyway we fixed it.
+- continued fix for #461
+- fix problems when removing rows/columns using context menu ([#523](https://github.com/warpech/jquery-handsontable/pull/523))
+
+Other:
+- new editor inheritance model ([#516](https://github.com/warpech/jquery-handsontable/pull/516))
+- `src/3rdparty/walkontable.js` has been divided into many source files in `src/3rdparty/walkontable/src/*`. Build process is updated to use Walkontable source files now
+- 3 Grunt test tasks are available now: `grunt test`, ``grunt test:handsontable`, `grunt test:walkontable`
+
+## [0.8.16](https://github.com/warpech/jquery-handsontable/tree/v0.8.16) (Mar 26, 2013)
+
+Features:
+- [Handsontable in Handsontable editor](http://handsontable.com/demo/handsontable.html)
+- performance and code quality fixes
+- `height` and `width` settings can now be functions (that return a number)
+
+Bugfixes:
+- autocomplete menu did not reset <li> margin
+- `destroy()` of one Handsontable instance made other instances on the same page unfunctional
+- Autocomplete (Bootstrap Typeahead) did not allow empty string as a value ([#254](https://github.com/warpech/jquery-handsontable/issues/254))
+- outsideClickDeselects : false disables all focus in other inputs outside the table ([#408](https://github.com/warpech/jquery-handsontable/issues/408))
+- can't scroll all the way horizontally ([#430](https://github.com/warpech/jquery-handsontable/issues/430))
+- scrollable Handsontable does not work well with Twitter Bootstrap ([#224](https://github.com/warpech/jquery-handsontable/issues/224))
+- weirdly shrinking table when height attribute was not set ([#461](https://github.com/warpech/jquery-handsontable/issues/461))
+
+Other:
+- trying to load a string as a data source now throws an error
+
 ## [0.8.15](https://github.com/warpech/jquery-handsontable/tree/v0.8.15) (Mar 18, 2013)
 
 Features:

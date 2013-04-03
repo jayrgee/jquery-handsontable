@@ -335,7 +335,7 @@ describe('AutocompleteEditor', function () {
       ['one', 'two'],
       ['three', 'four']
     ]);
-    expect(count).toEqual(1); //1 for loadData, 1 for edit
+    expect(count).toEqual(1); //1 for loadData
   });
 
   it('strict mode should use value if it matches the list (async response)', function () {
@@ -416,6 +416,33 @@ describe('AutocompleteEditor', function () {
       keyUp(68); //e
       expect(autocomplete().$menu.find('li:eq(0)').data('value')).toEqual('red');
     });
+  });
+
+  it('should be able to use empty value ("")', function () {
+
+    handsontable({
+      data: [
+        ['one', 'two'],
+        ['three', 'four']
+      ],
+      columns: [
+        {
+          type: Handsontable.AutocompleteCell,
+          source: ['', 'BMW', 'Bentley'],
+          strict: true
+        },
+        { type: 'text'}
+      ],
+      asyncRendering: false //TODO make sure tests pass also when async true
+    });
+
+    selectCell(0, 0);
+    keyDownUp('enter');
+
+    autocomplete().$menu.find('li:eq(0)').trigger('click');
+
+    expect(getDataAtCell(0, 0)).toEqual('');
+
   });
 
   it('cancel editing (Esc) should restore the previous value', function () {

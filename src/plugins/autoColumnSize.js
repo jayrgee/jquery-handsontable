@@ -6,11 +6,17 @@ function HandsontableAutoColumnSize() {
   var that = this
     , instance
     , tmp
+    , tmpStyle
     , $tmp
     , tmpTbody
+    , tmpTbodyTd
     , tmpThead
+    , tmpTheadStyle
+    , tmpTheadTh
     , tmpNoRenderer
+    , tmpNoRendererTd
     , tmpRenderer
+    , tmpRendererTd
     , sampleCount = 5; //number of samples to take of each value length
 
   this.beforeInit = function () {
@@ -19,38 +25,44 @@ function HandsontableAutoColumnSize() {
 
   this.determineColumnWidth = function (col) {
     if (!tmp) {
-      tmp = document.createElement('DIV');
-      tmp.className = 'handsontable';
-      tmp.style.position = 'absolute';
-      tmp.style.top = '0';
-      tmp.style.left = '0';
-      tmp.style.display = 'none';
 
-      tmpThead = $('<table><thead><tr><td></td></tr></thead></table>')[0];
+      var d = document;
+
+      tmpThead = d.createElement('table');
+      tmpThead.appendChild(d.createElement('thead')).appendChild(d.createElement('tr')).appendChild(d.createElement('th'));
+      tmpTheadTh = tmpThead.getElementsByTagName('th')[0];
+
+      tmpThead.className = 'htTable';
+      tmpTheadStyle = tmpThead.style;
+      tmpTheadStyle.tableLayout = 'auto';
+      tmpTheadStyle.width = 'auto';
+
+      tmpTbody = tmpThead.cloneNode(false);
+      tmpTbody.appendChild(d.createElement('tbody')).appendChild(d.createElement('tr')).appendChild(d.createElement('td'));
+      tmpTbodyTd = tmpTbody.getElementsByTagName('td')[0];
+
+      tmpNoRenderer = tmpTbody.cloneNode(true);
+      tmpNoRendererTd = tmpNoRenderer.getElementsByTagName('td')[0];
+
+      tmpRenderer = tmpTbody.cloneNode(true);
+      tmpRendererTd = tmpRenderer.getElementsByTagName('td')[0];
+
+      tmp = d.createElement('div');
+      tmp.className = 'handsontable hidden';
+      tmpStyle = tmp.style;
+
       tmp.appendChild(tmpThead);
-
-      tmp.appendChild(document.createElement('BR'));
-
-      tmpTbody = $('<table><tbody><tr><td></td></tr></tbody></table>')[0];
       tmp.appendChild(tmpTbody);
-
-      tmp.appendChild(document.createElement('BR'));
-
-      tmpNoRenderer = $('<table class="htTable"><tbody><tr><td></td></tr></tbody></table>')[0];
       tmp.appendChild(tmpNoRenderer);
-
-      tmp.appendChild(document.createElement('BR'));
-
-      tmpRenderer = $('<table class="htTable"><tbody><tr><td></td></tr></tbody></table>')[0];
       tmp.appendChild(tmpRenderer);
 
-      document.body.appendChild(tmp);
       $tmp = $(tmp);
 
-      $tmp.find('table').css({
-        tableLayout: 'auto',
-        width: 'auto'
-      });
+      tmpNoRenderer = $tmp.children().eq(2);
+      tmpRenderer = $tmp.children().eq(3);
+
+      d.body.appendChild(tmp);
+
     }
 
     var rows = instance.countRows();
@@ -76,7 +88,7 @@ function HandsontableAutoColumnSize() {
 
     var settings = instance.getSettings();
     if (settings.colHeaders) {
-      instance.getColHeader(col, tmpThead.firstChild.firstChild.firstChild); //TH innerHTML
+      instance.getColHeader(col, tmpTheadTh); //TH innerHTML
     }
 
     var txt = '';
@@ -87,26 +99,28 @@ function HandsontableAutoColumnSize() {
         }
       }
     }
-    tmpTbody.firstChild.firstChild.firstChild.innerHTML = txt; //TD innerHTML
+    tmpTbodyTd.innerHTML = txt; //TD innerHTML
 
-    $(tmpRenderer.firstChild.firstChild.firstChild).empty();
-    $(tmpNoRenderer.firstChild.firstChild.firstChild).empty();
+    instance.view.wt.wtDom.empty(tmpRendererTd);
+    instance.view.wt.wtDom.empty(tmpNoRendererTd);
 
-    tmp.style.display = 'block';
+    tmpStyle.display = 'block';
+
     var width = $tmp.outerWidth();
 
     var cellProperties = instance.getCellMeta(0, col);
     if (cellProperties.renderer) {
       var str = 9999999999;
 
-      tmpNoRenderer.firstChild.firstChild.firstChild.innerHTML = str;
+      tmpNoRendererTd.appendChild(document.createTextNode(str));
 
-      cellProperties.renderer(instance, tmpRenderer.firstChild.firstChild.firstChild, 0, col, instance.colToProp(col), str, cellProperties);
+      cellProperties.renderer(instance, tmpRendererTd, 0, col, instance.colToProp(col), str, cellProperties);
 
-      width += $(tmpRenderer).width() - $(tmpNoRenderer).width(); //add renderer overhead to the calculated width
+      width += tmpRenderer.width() - tmpNoRenderer.width(); //add renderer overhead to the calculated width
     }
 
-    tmp.style.display = 'none';
+    tmpStyle.display = 'none';
+
     return width;
   };
 

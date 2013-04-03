@@ -1,25 +1,26 @@
 function HandsontableDateEditorClass(instance) {
-  if (instance) {
     this.isCellEdited = false;
     this.instance = instance;
     this.createElements();
     this.bindEvents();
-  }
 }
 
-HandsontableDateEditorClass.prototype = new HandsontableTextEditorClass();
+Handsontable.helper.inherit(HandsontableDateEditorClass, HandsontableTextEditorClass);
 
-HandsontableDateEditorClass.prototype._createElements = HandsontableTextEditorClass.prototype.createElements;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.createElements
+ */
 HandsontableDateEditorClass.prototype.createElements = function () {
-  this._createElements();
+  HandsontableTextEditorClass.prototype.createElements.call(this);
 
-  this.datePickerdiv = $("<div>");
-  this.datePickerdiv[0].style.position = 'absolute';
-  this.datePickerdiv[0].style.top = 0;
-  this.datePickerdiv[0].style.left = 0;
-  this.datePickerdiv[0].style.zIndex = 99;
-  this.instance.rootElement[0].appendChild(this.datePickerdiv[0]);
+  this.datePicker = document.createElement('DIV');
+  this.datePickerStyle = this.datePicker.style;
+  this.datePickerStyle.position = 'absolute';
+  this.datePickerStyle.top = 0;
+  this.datePickerStyle.left = 0;
+  this.datePickerStyle.zIndex = 99;
+  this.instance.rootElement[0].appendChild(this.datePicker);
+  this.$datePicker = $(this.datePicker);
 
   var that = this;
   var defaultOptions = {
@@ -27,55 +28,51 @@ HandsontableDateEditorClass.prototype.createElements = function () {
     showButtonPanel: true,
     changeMonth: true,
     changeYear: true,
-    altField: this.TEXTAREA,
+    altField: this.$textarea,
     onSelect: function () {
       that.finishEditing(false);
     }
   };
-  this.datePickerdiv.datepicker(defaultOptions);
-  this.datePickerdiv.hide();
-}
+  this.$datePicker.datepicker(defaultOptions);
+  this.hideDatepicker();
+};
 
-HandsontableDateEditorClass.prototype._bindEvents = HandsontableTextEditorClass.prototype.bindEvents;
-
-HandsontableDateEditorClass.prototype.bindEvents = function () {
-  this._bindEvents();
-}
-
-HandsontableDateEditorClass.prototype._beginEditing = HandsontableTextEditorClass.prototype.beginEditing;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.beginEditing
+ */
 HandsontableDateEditorClass.prototype.beginEditing = function (row, col, prop, useOriginalValue, suffix) {
-  this._beginEditing(row, col, prop, useOriginalValue, suffix);
+  HandsontableTextEditorClass.prototype.beginEditing.call(this, row, col, prop, useOriginalValue, suffix);
   this.showDatepicker();
-}
+};
 
-HandsontableDateEditorClass.prototype._finishEditing = HandsontableTextEditorClass.prototype.finishEditing;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.finishEditing
+ */
 HandsontableDateEditorClass.prototype.finishEditing = function (isCancelled, ctrlDown) {
   this.hideDatepicker();
-  this._finishEditing(isCancelled, ctrlDown);
-}
+  HandsontableTextEditorClass.prototype.finishEditing.call(this, isCancelled, ctrlDown);
+};
 
 HandsontableDateEditorClass.prototype.showDatepicker = function () {
   var $td = $(this.instance.dateEditor.TD);
   var position = $td.position();
-  this.datePickerdiv[0].style.top = (position.top + $td.height()) + 'px';
-  this.datePickerdiv[0].style.left = position.left + 'px';
+  this.datePickerStyle.top = (position.top + $td.height()) + 'px';
+  this.datePickerStyle.left = position.left + 'px';
 
   var dateOptions = {
     defaultDate: this.originalValue || void 0
   };
   $.extend(dateOptions, this.cellProperties);
-  this.datePickerdiv.datepicker("option", dateOptions);
+  this.$datePicker.datepicker("option", dateOptions);
   if (this.originalValue) {
-    this.datePickerdiv.datepicker("setDate", this.originalValue);
+    this.$datePicker.datepicker("setDate", this.originalValue);
   }
-  this.datePickerdiv.show();
-}
+  this.datePickerStyle.display = 'block';
+};
 
 HandsontableDateEditorClass.prototype.hideDatepicker = function () {
-  this.datePickerdiv.hide();
-}
+  this.datePickerStyle.display = 'none';
+};
 
 /**
  * Date editor (uses jQuery UI Datepicker)

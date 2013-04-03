@@ -14,7 +14,7 @@ var lastFrame = null;
   countFrames();
 })();
 
-var nextFrame = function (myFrame) {
+var nextFrame = function () {
   if (lastFrame === null) {
     lastFrame = frame;
   }
@@ -133,6 +133,7 @@ var handsontableKeyTriggerFactory = function (type) {
     else if (typeof key === 'number') {
       ev.keyCode = key;
     }
+    ev.originalEvent = {}; //needed as long Handsontable searches for event.originalEvent
     $.extend(ev, extend);
     $(document.activeElement).trigger(ev);
   }
@@ -166,7 +167,7 @@ var keyProxy = function () {
 };
 
 var autocompleteEditor = function () {
-  return spec().$container.data('handsontable').autocompleteEditor.TEXTAREA;
+  return spec().$container.data('handsontable').autocompleteEditor.$textarea;
 };
 
 /**

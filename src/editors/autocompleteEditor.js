@@ -1,21 +1,21 @@
 function HandsontableAutocompleteEditorClass(instance) {
-  if (instance) {
     this.isCellEdited = false;
     this.instance = instance;
     this.createElements();
     this.bindEvents();
-  }
+  this.emptyStringLabel = '\u00A0\u00A0\u00A0'; //3 non-breaking spaces
 }
 
-HandsontableAutocompleteEditorClass.prototype = new HandsontableTextEditorClass();
+Handsontable.helper.inherit(HandsontableAutocompleteEditorClass, HandsontableTextEditorClass);
 
-HandsontableAutocompleteEditorClass.prototype._createElements = HandsontableTextEditorClass.prototype.createElements;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.createElements
+ */
 HandsontableAutocompleteEditorClass.prototype.createElements = function () {
-  this._createElements();
+  HandsontableTextEditorClass.prototype.createElements.call(this);
 
-  this.TEXTAREA.typeahead();
-  this.typeahead = this.TEXTAREA.data('typeahead');
+  this.$textarea.typeahead();
+  this.typeahead = this.$textarea.data('typeahead');
   this.typeahead._render = this.typeahead.render;
   this.typeahead.minLength = 0;
 
@@ -29,29 +29,43 @@ HandsontableAutocompleteEditorClass.prototype.createElements = function () {
   this.typeahead.matcher = function () {
     return true;
   };
+
+  var _process = this.typeahead.process;
+  var that = this;
+  this.typeahead.process = function (items) {
+    for (var i = 0, ilen = items.length; i < ilen; i++) {
+      if (items[i] === '') {
+        //this is needed because because of issue #254
+        //empty string ('') is a falsy value and breaks the loop in bootstrap-typeahead.js method `sorter`
+        //best solution would be to change line: `while (item = items.shift()) {`
+        //                                   to: `while ((item = items.shift()) !== void 0) {`
+        items[i] = that.emptyStringLabel;
+      }
+    }
+    return _process.call(this, items);
+  };
 };
 
-HandsontableAutocompleteEditorClass.prototype._bindEvents = HandsontableTextEditorClass.prototype.bindEvents;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.bindEvents
+ */
 HandsontableAutocompleteEditorClass.prototype.bindEvents = function () {
   var that = this;
 
   this.typeahead.listen();
 
-  this.TEXTAREA.off('keydown'); //unlisten
-  this.TEXTAREA.off('keyup'); //unlisten
-  this.TEXTAREA.off('keypress'); //unlisten
+  this.$textarea.off('keydown').off('keyup').off('keypress'); //unlisten
 
-  this.TEXTAREA_PARENT.off('.acEditor').on('keydown.acEditor', function (event) {
+  this.$textareaParent.off('.acEditor').on('keydown.acEditor', function (event) {
     switch (event.keyCode) {
       case 38: /* arrow up */
         that.typeahead.prev();
-        event.stopImmediatePropagation();
+        event.stopImmediatePropagation(); //stops TextEditor and core onKeyDown handler
         break;
 
       case 40: /* arrow down */
         that.typeahead.next();
-        event.stopImmediatePropagation();
+        event.stopImmediatePropagation(); //stops TextEditor and core onKeyDown handler
         break;
 
       case 13: /* enter */
@@ -60,17 +74,18 @@ HandsontableAutocompleteEditorClass.prototype.bindEvents = function () {
     }
   });
 
-  this.TEXTAREA_PARENT.on('keyup.acEditor', function (event) {
+  this.$textareaParent.on('keyup.acEditor', function (event) {
     if (Handsontable.helper.isPrintableChar(event.keyCode) || event.keyCode === 113 || event.keyCode === 13 || event.keyCode === 8 || event.keyCode === 46) {
       that.typeahead.lookup();
     }
   });
 
-  this._bindEvents();
+
+  HandsontableTextEditorClass.prototype.bindEvents.call(this);
 };
-
-HandsontableAutocompleteEditorClass.prototype._bindTemporaryEvents = HandsontableTextEditorClass.prototype.bindTemporaryEvents;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.bindTemporaryEvents
+ */
 HandsontableAutocompleteEditorClass.prototype.bindTemporaryEvents = function (td, row, col, prop, value, cellProperties) {
   var that = this
     , i
@@ -79,11 +94,15 @@ HandsontableAutocompleteEditorClass.prototype.bindTemporaryEvents = function (td
   this.typeahead.select = function () {
     var output = this.hide(); //need to hide it before destroyEditor, because destroyEditor checks if menu is expanded
     that.instance.destroyEditor(true);
+    var val = this.$menu.find('.active').attr('data-value');
+    if (val === that.emptyStringLabel) {
+      val = '';
+    }
     if (typeof cellProperties.onSelect === 'function') {
-      cellProperties.onSelect(row, col, prop, this.$menu.find('.active').attr('data-value'), this.$menu.find('.active').index());
+      cellProperties.onSelect(row, col, prop, val, this.$menu.find('.active').index());
     }
     else {
-      that.instance.setDataAtRowProp(row, prop, this.$menu.find('.active').attr('data-value'));
+      that.instance.setDataAtRowProp(row, prop, val);
     }
     return output;
   };
@@ -112,7 +131,7 @@ HandsontableAutocompleteEditorClass.prototype.bindTemporaryEvents = function (td
     }
   }
 
-  this._bindTemporaryEvents(td, row, col, prop, value, cellProperties);
+  HandsontableTextEditorClass.prototype.bindTemporaryEvents.call(this, td, row, col, prop, value, cellProperties);
 
   function onDblClick() {
     that.beginEditing(row, col, prop, true);
@@ -123,9 +142,9 @@ HandsontableAutocompleteEditorClass.prototype.bindTemporaryEvents = function (td
 
   this.instance.view.wt.update('onCellDblClick', onDblClick);
 };
-
-HandsontableAutocompleteEditorClass.prototype._finishEditing = HandsontableTextEditorClass.prototype.finishEditing;
-
+/**
+ * @see HandsontableTextEditorClass.prototype.finishEditing
+ */
 HandsontableAutocompleteEditorClass.prototype.finishEditing = function (isCancelled, ctrlDown) {
   if (!isCancelled) {
     if (this.isMenuExpanded() && this.typeahead.$menu.find('.active').length) {
@@ -136,7 +155,8 @@ HandsontableAutocompleteEditorClass.prototype.finishEditing = function (isCancel
       this.isCellEdited = false; //cell value was not picked from this.typeahead.select (issue #405)
     }
   }
-  this._finishEditing(isCancelled, ctrlDown);
+
+  HandsontableTextEditorClass.prototype.finishEditing.call(this, isCancelled, ctrlDown);
 };
 
 HandsontableAutocompleteEditorClass.prototype.isMenuExpanded = function () {
